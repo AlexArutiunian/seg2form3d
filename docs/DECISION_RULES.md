@@ -14,7 +14,7 @@
 
 Legacy 2D сохранён только для сравнения. Он принимает уверенную прямоугольную форму и отклоняет слишком плоскую (`height/length < 0.08`), вытянутую (`length/width >= 3.0`), нерегулярную (`solidity < 0.68`) или круглую форму по 2D-порогам.
 
-## Surface normals
+## Surface normals v2
 
 Экспериментальный backend строит локальные нормали RGB-D поверхности, последовательно выделяет до шести плоскостей и группирует направления нормалей.
 
@@ -27,7 +27,7 @@ Legacy 2D сохранён только для сравнения. Он прин
 
 Коробочный силуэт может подтвердить плоскую форму при более мягком покрытии: planes `>= 50%`, normals `>= 60%`, solidity `>= 0.86`, rectangularity `>= 0.68`, `4..10` вершин и разумная согласованность 3D/2D масштаба.
 
-Явный риск качения фиксируется, если curved surface `>= 48%`, plane coverage `<= 50%`, normal coverage `<= 55%` или интегральный risk score `>= 0.52`. Неоднозначный результат считается отказным (`unknown_roll_risk`) по консервативному правилу.
+`clear_curved` диагностируется при curved surface `>= 48%`, plane coverage `<= 50%`, normal coverage `<= 55%` или risk score `>= 0.52`. В `v2` этот общий флаг сам по себе не создаёт отказ: нужен один из конкретных rotational-кандидатов ниже.
 
 Текущий score в этой версии кода:
 
@@ -38,6 +38,34 @@ Legacy 2D сохранён только для сравнения. Он прин
 + 0.10 * (1 - largest_plane_ratio)
 ```
 
+### Поперечные сечения depth
+
+Объект делится на шесть сечений вдоль главной оси в диапазоне `10..90` процентилей. Нужно минимум `120` depth points, `30` точек на сечение и поперечный span не менее `6 px`. В каждом сечении сравнивается линейная и квадратичная depth-модель.
+
+Cross-section rotational support требует одновременно median `R2 >= 0.45`, не менее `50%` кривых сечений, согласованный знак кривизны `>= 80%` и median абсолютной depth-корреляции `>= 0.55`. Он даёт отказ только при `height/width >= 0.25`, `solidity >= 0.80` и отсутствии сильной плоской грани.
+
+### Ось вращения
+
+Axis fit запускается при `length/width >= 2.2`. Сильный цилиндр требует confidence `>= 0.50`, radial inliers `>= 0.72`, normalized radial residual `<= 0.18`, angular coverage `>= 120°`, radius CV `<= 0.10`, минимум четыре сечения и radial support в диапазоне `0.55..1.40`.
+
+Более слабый axis-supported вариант требует quadratic improvement `>= 0.38`, plane residual P80 `>= 3 mm`, того же покрытия/стабильности сечений и `5..12` contour vertices. Он подтверждается confidence `>= 0.35`, radial inliers `>= 0.60`, residual `<= 0.22` и support `0.50..1.45`.
+
+Partial-axis вариант требует confidence `>= 0.48`, radial inliers `>= 0.80`, residual `<= 0.16`, coverage `>= 120°` и support `0.20..1.45`.
+
+### Компактные круглые объекты
+
+Compact rotational candidate требует circularity `>= 0.70`, solidity `>= 0.93`, `6..12` вершин, bbox aspect `1.25..2.40`, `height/width >= 0.55`, quadratic improvement `>= 0.40`, plane residual P80 `>= 3 mm` и largest plane `<= 0.65`.
+
+Сильный компактный круглый объект: circularity `>= 0.84`, solidity `>= 0.93`, `length/width <= 1.35`, `height/width >= 0.35`.
+
+Расширенный compact-round вариант требует circularity `>= 0.72`, solidity `>= 0.94`, `6..12` вершин, `length/width <= 1.35`, `height/width >= 0.45`, rectangularity `<= 0.90`, largest plane `<= 0.55` и хотя бы один depth/curvature support.
+
+### Защита плоской коробки
+
+Rotational-кандидаты подавляются при очень сильной плоскости (`planar >= 0.90`, largest plane `>= 0.60`, curved `<= 0.12`) либо коробочной плоской грани (`planar >= 0.82`, largest plane `>= 0.60`, curved `<= 0.18`, rectangularity `>= 0.78`, elongation `<= 2.5`, `4..8` вершин).
+
+Semantic support применяется только если segmentation backend вернул содержательное имя класса с rotational token (`bottle`, `can`, `cylinder`, `tube`, `roll`, `ball`, `sphere`) и depth подтверждает кривизну. Общий класс `sku` semantic-отказа не создаёт.
+
 ## Итог
 
-`REJECT`, если сработало размерное правило или разрешённое shape-правило. `ACCEPT`, если причин отказа нет. `ROBOT` зарезервирован для маски манипулятора. Некачественная глубина даёт `UNKNOWN`, а не ложное принятие.
+`REJECT`, если сработало размерное правило либо хотя бы одно конкретное shape-правило: axis, axis-supported, partial-axis, cross-section, compact, strong-compact, compact-round или semantic rotational risk. `ACCEPT`, если причин отказа нет. `ROBOT` зарезервирован для маски манипулятора. Некачественная глубина даёт `UNKNOWN`, а не ложное принятие.

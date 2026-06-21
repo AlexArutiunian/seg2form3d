@@ -105,6 +105,11 @@ class MeasurementEngine:
         metrics["pca_to_bbox_projection_ratio"] = length / projected_span_mm
 
         if self.config.shape_backend == "surface_normals":
+            metrics.update(
+                shape_length_mm=length,
+                shape_width_mm=width,
+                shape_height_mm=height,
+            )
             surface = analyze_surface_normals(
                 instance.mask,
                 frame.depth_aligned_to_color,
@@ -112,10 +117,11 @@ class MeasurementEngine:
                 frame.color_intrinsics,
                 instance.instance_id,
                 metrics,
+                instance.source_class_name,
             )
             metrics.update(surface.metrics)
             shape_class = surface.shape_class
-            shape_reasons = [shape_class] if surface.reject else []
+            shape_reasons = surface.reasons if surface.reject else []
         else:
             shape_class, shape_reasons = self._classify_shape(
                 metrics,

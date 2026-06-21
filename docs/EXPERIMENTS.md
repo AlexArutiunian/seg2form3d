@@ -23,16 +23,16 @@
 | SAM3/RTDM remote client | да | да | новый безопасный wire protocol |
 | RGB-D размеры + offline recompute | да | да | калибровочный benchmark |
 | Strict 3D cylinder/box | частично | документирован | перенести финальные tuned thresholds |
-| Normals/planes roll risk | ранняя v1 | явно помечена experimental | cross-section, partial-axis, compact/semantic rules |
+| Normals/planes roll risk | ранняя v1 | v2: cross-section, axis, partial-axis, compact/semantic | проверить на сохранённом all_pool |
 | all-pool/rescue overlays | нет | только формат run и COCO import | восстановить QC/rescue tool по исходным данным |
 | Unique-mask analysis | нет | heuristic grouping tool | embedding + physical SKU IDs |
 | SAM3 -> Mask R-CNN training | нет | полный train/eval/serve contour | GPU regression run |
 | RGB+depth reject classifier | нет | нет | отдельная архитектура и labels accept/reject |
 | Locate Anything backend | нет | нет | adapter + benchmark |
 
-### Важное расхождение критериев
+### История расхождения критериев
 
-`shape_normals.py` в опубликованной версии заканчивается ранним решением по plane coverage, normal clusters и weighted score. В нём всё ещё присутствует `0.45 * curved_surface_ratio`. Поздние правила наших прогонов для cross-section rotational support, axis-supported/partial-axis цилиндров, compact-round и semantic roll-risk в репозитории отсутствуют. Их нельзя достоверно восстановить только из отчётных порогов без последней реализации и regression samples; поэтому текущий код не объявлен финальной версией shape classifier.
+Первый публичный snapshot содержал только раннее решение по plane coverage, normal clusters и weighted score. В `surface_normals_v2` добавлены зафиксированные поздние правила cross-section rotational support, axis-supported/partial-axis цилиндров, compact-round и semantic roll-risk. Коэффициент `0.45 * curved_surface_ratio` остаётся диагностикой, но больше не является самостоятельной причиной отказа. Синтетические regression-тесты добавлены; повторный benchmark на исходном `all_pool` всё ещё обязателен, поскольку сами RGB-D артефакты не хранятся в публичном Git.
 
 ## Зафиксированные результаты прошлых прогонов
 

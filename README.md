@@ -8,7 +8,7 @@ RGB-D pipeline для складских SKU: камера -> instance segmentat
 - параллельные удалённые backend-ы SAM3 и RTDM/Mask R-CNN;
 - сохранение RGB, depth, mask-index, overlay и metadata;
 - offline-пересчёт геометрии без повторной сегментации;
-- строгая 3D-проверка цилиндров и экспериментальная оценка normals/planes;
+- строгая 3D-проверка цилиндров и `surface_normals_v2` с planes, cross-sections, axis и compact-round подтверждениями;
 - полный teacher-student train pipeline: run-папки -> COCO -> dedup -> fine-tune -> COCO evaluation -> inference server.
 
 GPU-веса, датасеты, адреса лаборатории и ключи в Git не входят.
