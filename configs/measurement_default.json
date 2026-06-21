@@ -1,0 +1,15 @@
+{
+  "min_dimension_mm": 10.0,
+  "max_dimension_mm": 450.0,
+  "max_center_z_mm": 1500.0,
+  "min_mask_area_px": 80,
+  "min_depth_points": 80,
+  "min_depth_valid_ratio": 0.15,
+  "reject_by_shape": true,
+  "reject_flat": true,
+  "reject_elongated": true,
+  "reject_round": true,
+  "shape_backend": "strict_3d",
+  "pca_low_percentile": 2.0,
+  "pca_high_percentile": 98.0
+}
